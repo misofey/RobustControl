@@ -5,7 +5,8 @@ ops =  bodeoptions;
 s =tf('s');
 
 mimo = FWT(1:2, 1:2);
-G = mimo;
+G = tf(mimo);
+Gd = FWT(1:2, 3);
 %%% RGA %%%
 % bode(mimo)
 
@@ -25,8 +26,9 @@ M = 3;
 % Cut off frequency
 omega_b = 0.3 * 2*pi;
     
-% Controller weights
-W_p1 = inv(makeweight(a, omega_b, M));
+% W_p1 = inv(makeweight(a, omega_b, M));
+
+W_p1 = (s/M + omega_b) / (s + omega_b*a);
 
 W_p2 = 0.1;
 W_p = [W_p1 0; 0 W_p2];
@@ -48,26 +50,36 @@ W_u = [W_u1 0;
 % legend();
 %step(feedback(L, I))
 
-%% HINF DESIGN %%
-P = augw(mimo, W_p, W_u, []);
-[K,CL,gamma,INFO] = hinfsyn(P);
+% % HINF DESIGN %%
+% P = minreal(augw(G, W_p, W_u, []));
+% [K,CL,gamma,INFO] = hinfsyn(P, 2, 2);
+[K,CL,gamma,INFO] = mixsyn(G, W_p, W_u, []);
 
-L = tf(minreal(mimo*K));
 % sigma(CL, ss(gamma))
 
-S = inv(eye(2) + K*mimo);
+L=G*K;
+S = feedback(eye(2),L);
+T = G*K*S;
 KS = K*S;
+
+
 hold on
 grid
 bode(S(1, 1))
 bode(1/W_p1)
-legend("S", "W_clp1");
+legend("S", "W_p1");
 hold off
 % step(feedback(L1, I), feedback(L2, I))
+
 figure;
 hold on
-bode(KS(2, 2));
+bode(KS(2, 1));
 bode(1/W_u2);
 grid;
-legend("KS", "W_p2");
+legend("KS", "W_u2");
+hold off
+
+figure;
+hold on
+sigma(T)
 hold off
