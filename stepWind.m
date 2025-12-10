@@ -28,5 +28,10 @@ P_sim.InputName = {'V (m/s)'};
 P_sim.OutputName = [G.OutputName; G.InputName];
 
 step(P_sim)
+a = stepinfo(P_sim);
 
+beta_step = a(3)
+tau_step = a(4)
+omega_step = a(1)
+z_step = a(2)
 end

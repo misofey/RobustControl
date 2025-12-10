@@ -51,35 +51,115 @@ W_u = [W_u1 0;
 %step(feedback(L, I))
 
 % % HINF DESIGN %%
-% P = minreal(augw(G, W_p, W_u, []));
-% [K,CL,gamma,INFO] = hinfsyn(P, 2, 2);
-[K,CL,gamma,INFO] = mixsyn(G, W_p, W_u, []);
+P = minreal(augw(G, W_p, W_u, []));
+[K,CL,gamma,INFO] = hinfsyn(P, 2, 2);
+% [K,CL,gamma,INFO] = mixsyn(G, W_p, W_u, []);
 
 % sigma(CL, ss(gamma))
 
-L=G*K;
+K.OutputName = ["\beta", "\tau_r"];
+L=minreal(G*K);
 S = feedback(eye(2),L);
+S.InputName = ["d_{\omega_r}", "d_z"];
+S.OutputName = ["\omega_r", "z"];
 T = G*K*S;
 KS = K*S;
 
+K_poles = pole(K);
+G_poles = pole(G);
 
-hold on
-grid
-bode(S(1, 1))
-bode(1/W_p1)
-legend("S", "W_p1");
-hold off
-% step(feedback(L1, I), feedback(L2, I))
+if(max(real(K_poles))<0 && max(real(G_poles))<0)
+    disp("The system is internally stable")
+else
+    disp("The system is not internally stable")
+    max_K_pole = max(real(K_poles))
+    max_G_pole = max(real(G_poles))
+end
 
-figure;
-hold on
-bode(KS(2, 1));
-bode(1/W_u2);
-grid;
-legend("KS", "W_u2");
-hold off
+opts = bodeoptions;
+opts.PhaseVisible = "off";
 
-figure;
-hold on
-sigma(T)
-hold off
+
+plot_sensitivity = false;
+plot_controller_sensitivity = false;
+plot_time_simulations = true;
+
+if plot_sensitivity
+    figure;
+    hold on
+    grid
+    bodeplot(S(1, 1), opts)
+    bodeplot(1/W_p1, opts)
+    legend("S", "1/W_{p11}");
+    title("")
+    hold off
+    
+    figure;
+    hold on
+    grid
+    bodeplot(S(2, 1), opts)
+    bodeplot(1/W_p(2, 2), opts)
+    legend("S", "1/W_{p22}");
+    title("")
+    hold off
+    
+    figure;
+    hold on
+    grid
+    bodeplot(S(1, 2), opts)
+    bodeplot(1/W_p(1, 1), opts)
+    legend("S", "1/W_{p11}");
+    title("")
+    hold off
+    
+    figure;
+    hold on
+    grid
+    bodeplot(S(2, 2), opts)
+    bodeplot(1/W_p(2, 2), opts)
+    legend("S", "1/W_{p22}");
+    title("")
+    hold off
+end
+
+if plot_controller_sensitivity
+    figure;
+    hold on
+    grid
+    bodeplot(KS(1, 1), opts)
+    bodeplot(1/W_u(1, 1), opts)
+    legend("S", "1/W_{u11}");
+    title("")
+    hold off
+    
+    figure;
+    hold on
+    grid
+    bodeplot(KS(2, 1), opts)
+    bodeplot(1/W_u(2, 2), opts)
+    legend("S", "1/W_{u22}");
+    title("")
+    hold off
+    
+    figure;
+    hold on
+    grid
+    bodeplot(KS(1, 2), opts)
+    bodeplot(1/W_u(1, 1), opts)
+    legend("S", "1/W_{u11}");
+    title("")
+    hold off
+    
+    figure;
+    hold on
+    grid
+    bodeplot(KS(2, 2), opts)
+    bodeplot(1/W_u(2, 2), opts)
+    legend("S", "1/W_{u22}");
+    title("")
+    hold off
+end
+
+if plot_time_simulations
+    stepWind(FWT, -K)
+end
