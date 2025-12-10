@@ -67,7 +67,7 @@ beta_z_pid = tunablePID("beta_z_pid", "PD");
 % tau_z.u = 'e_z';
 % tau_z.y = 'tau';
 
-K = [beta_omega_LL + beta_omega_PID, beta_z_pid; tau_omega_PID + tau_omega_LL, 0];
+K = [beta_omega_LL + beta_omega_PID, 0; tau_omega_PID + tau_omega_LL, 0];
 K.InputName = ["e_omega", "e_z"];
 K.OutputName = ["beta", "tau"];
 
@@ -108,7 +108,7 @@ N = hinfstruct(mimo_cl, opt);
 %     {"omega_dist", "z_dist"} ...
 %     );
 
-K_tuned = tf([N.Blocks.beta_omega_LL + N.Blocks.beta_omega_PID, N.Blocks.beta_z_pid; N.Blocks.tau_omega_PID + N.Blocks.tau_omega_LL, 0]);
+K_tuned = tf([N.Blocks.beta_omega_LL + N.Blocks.beta_omega_PID, 0; N.Blocks.tau_omega_PID + N.Blocks.tau_omega_LL, 0]);
 K_tuned.InputName = ["e_omega", "e_z"];
 K_tuned.OutputName = ["beta", "tau"];
     
