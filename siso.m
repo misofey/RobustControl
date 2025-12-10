@@ -1,4 +1,4 @@
-load("/home/mahargardr/master_courses/robust_control/Assignment_Data_SC42145_2025.mat")
+load("Assignment_Data_SC42145_2025.mat")
 
 % make ss model
 sys = ss(A,B,C,D);
@@ -27,7 +27,7 @@ pzplot(G_pitch);
 %% 
 
 % Simulation
-load("/home/mahargardr/master_courses/robust_control/siso_controller.mat")
+load("siso_controller.mat")
 
 FWT = ss(A, B, C, D);
 

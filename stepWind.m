@@ -34,4 +34,9 @@ beta_step = a(3)
 tau_step = a(4)
 omega_step = a(1)
 z_step = a(2)
+
+[omega_gm, omega_pm] = margin(P_sim(1))
+omega_bw = bandwidth(P_sim(1)) / 2 / pi
+[tau_gm, tau_pm] = margin(P_sim(4))
+tau_bw = bandwidth(P_sim(4)) / 2 / pi
 end
