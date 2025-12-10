@@ -3,7 +3,7 @@ load("K_MS");
 mimo = FWT(1:2, 1:2);
 G = tf(mimo);
 Gd = FWT(1:2, 3);
-G = [1 0; 0 500] * G;
+% G = G;
 
 G.InputName = ["beta", "tau"];
 G.OutputName = ["omega", "z"];
@@ -35,6 +35,8 @@ W_u = [W_u1 0;
 
 W_p.u = ["omega_dist", "z_dist"];
 W_p.y = "z1";
+% W_p.u = ["e_omega", "e_z"];
+% W_p.y = ["z1"];
 W_u.u = ["beta", "tau"];
 W_u.y = "z2";
 
@@ -42,26 +44,30 @@ W_u.y = "z2";
 
 tf_order = 8;
 
-beta_controller = tunableTF('K_beta', 4, 4) + tunablePID("K_beta2", "PD");
+% beta_controller = tunableTF('K_beta', 2, 2) + tunablePID("K_beta2", "PD");
+beta_omega_LL = tunableTF('beta_omega_LL', 2, 2);
+beta_omega_PID = tunablePID("beta_omega_PID", "PD");
+
 % beta_controller = tunablePID("K_beta", "PD");
 % beta_controller.u = 'e_omega';
 % beta_controller.y = 'beta';
 
-tau_controller = tunableTF('K_tau', 4, 4);
-% tau_controller = tunablePID("K_tau", "PD") + tunableTF("tftau", 2, 2);
+% tau_controller = tunableTF('K_tau', 4, 4);
+tau_omega_PID = tunablePID("tau_omega_PID", "PD");
+tau_omega_LL = tunableTF("tau_omega_LL", 2, 2);
 % tau_controller.u = 'e_omega';
 % tau_controller.y = 'tau';
 
-beta_z = tunablePID("gain_betaz", "PID");
+beta_z_pid = tunablePID("beta_z_pid", "PD");
 % beta_z.u = 'e_omega';
 % beta_z.y = 'beta';
 
-tau_z = tunablePID("gain_tauz", "P");
+% tau_z_PID = tunablePID("gain_tauz", "P");
 % tau_z = tunableTF('K_beta', 4, 4);
 % tau_z.u = 'e_z';
 % tau_z.y = 'tau';
 
-K = [beta_controller, beta_z; tau_controller, 0];
+K = [beta_omega_LL + beta_omega_PID, beta_z_pid; tau_omega_PID + tau_omega_LL, 0];
 K.InputName = ["e_omega", "e_z"];
 K.OutputName = ["beta", "tau"];
 
@@ -70,11 +76,11 @@ K.OutputName = ["beta", "tau"];
 % blk = tunablePID('tunableTF', 'pid');
 % Kp = realp('Kp' ,1);
 
+dist_omega = sumblk('omega_dist = omega + d_omega');
+dist_z = sumblk('z_dist = z + d_z');
 
 err_omega = sumblk('e_omega = w_omega - omega_dist');
 err_z = sumblk('e_z = w_z - z_dist');
-dist_omega = sumblk('omega_dist = omega + d_omega');
-dist_z = sumblk('z_dist = z + d_z');
 
 % mimo_complete = connect(G, Gd,...
 %     beta_controller, tau_controller, ...
@@ -82,11 +88,10 @@ dist_z = sumblk('z_dist = z + d_z');
 %     W_u, W_p,...
 %     {"w_omega", "w_z", "d_omega", "d_z"}, ...
 %     {"z1", "z2", "omega_dist", "z_dist", "beta", "tau"});
-mimo_cl = connect(G, ...
-    K, ...
+mimo_cl = connect(G, K, ...
     err_omega, err_z, dist_omega, dist_z, ...
     W_u, W_p,...
-    {"w_omega", "w_z"}, ...
+    {"d_omega", "d_z"}, ...
     {"z1", "z2"});
 
 %%
@@ -103,14 +108,23 @@ N = hinfstruct(mimo_cl, opt);
 %     {"omega_dist", "z_dist"} ...
 %     );
 
+K_tuned = tf([N.Blocks.beta_omega_LL + N.Blocks.beta_omega_PID, N.Blocks.beta_z_pid; N.Blocks.tau_omega_PID + N.Blocks.tau_omega_LL, 0]);
+K_tuned.InputName = ["e_omega", "e_z"];
+K_tuned.OutputName = ["beta", "tau"];
     
-L=minreal(G*K);
-S = minreal(feedback(eye(2),L));
+
+L=minreal(G*K_tuned);
+S = minreal(feedback(eye(2), L));
+
+% S = connect(G, K, ...
+%     err_omega, err_z, dist_omega, dist_z,...
+%     {"d_omega", "d_z"}, ...
+%     {"omega_dist", "z_dist"});
 S.InputName = ["d_omega", "d_z"];
 S.OutputName = ["omega_dist", "z_dist"];
 T = G*K*S;
 KS = K*S;
-hinfnorm(S)
+hinfnorm(W_p *S)
 opts = bodeoptions;
 opts.PhaseVisible = "off";
 
