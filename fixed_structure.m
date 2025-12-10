@@ -38,27 +38,29 @@ W_u.y = "z2";
 %% interconnection
 
 tf_order = 8;
-beta_controller = tunableTF('K_beta', tf(K_MS(1, 1)));
-% beta_controller = tunablePID("K_beta", "PD");
+% beta_controller = tunableTF('K_beta', tf(K_MS(1, 1)));
+beta_controller = tunablePID("K_beta", "PD");
 beta_controller.u = 'e_omega';
 beta_controller.y = 'beta';
 
-tau_controller = tunableTF('K_tau', tf(K_MS(2, 1)));
-% tau_controller = tunablePID("K_tau", "PD") + tunableTF("ktau2", 1, 1);
+% tau_controller = tunableTF('K_tau', tf(K_MS(2, 1)));
+tau_controller = tunablePID("K_tau", "PD") + tunableTF("ktau2", 1, 1);
 tau_controller.u = 'e_omega';
 tau_controller.y = 'tau';
 
-beta_z = tunableGain("gain_betaz", 1e-10)
+beta_z = tunablePID("gain_betaz", "PID")
 % beta_z.u = 'e_omega';
 % beta_z.y = 'beta';
 
-tau_z = tunableGain("gain_betaz", 1e-10)
+tau_z = tunableGain("gain_tauz", 1e-10)
 % tau_z.u = 'e_z';
 % tau_z.y = 'tau';
 
 K = [beta_controller, beta_z; tau_controller, tau_z];
 K.InputName = ["e_omega", "e_z"];
 K.OutputName = ["beta", "tau"];
+
+
 %%
 % blk = tunablePID('tunableTF', 'pid');
 % Kp = realp('Kp' ,1);
@@ -83,11 +85,11 @@ mimo_cl = connect(G, ...
     {"z1", "z2"});
 
 %%
-opt = hinfstructOptions('Display', 'final');
+opt = hinfstructOptions('Display', 'final', "RandomStart", 5);
 N = hinfstruct(mimo_cl, opt);
 
 %% recover sensitivity
-K = minreal([beta_controller, 1e-10; tau_controller, 1e-10]);
+% K = minreal([tf(beta_controller), 0; tf(tau_controller), 0]);
 % S = connect(G, Gd, ...
 %     beta_controller, tau_controller, ...
 %     err_omega, err_z, dist_omega, dist_z, ...
