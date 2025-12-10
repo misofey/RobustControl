@@ -56,7 +56,7 @@ P = minreal(augw(G, W_p, W_u, []));
 % [K,CL,gamma,INFO] = mixsyn(G, W_p, W_u, []);
 
 % sigma(CL, ss(gamma))
-
+%%
 K.OutputName = ["\beta", "\tau_r"];
 L=minreal(G*K);
 S = feedback(eye(2),L);
@@ -75,14 +75,15 @@ else
     max_K_pole = max(real(K_poles))
     max_G_pole = max(real(G_poles))
 end
-
+%%
 opts = bodeoptions;
 opts.PhaseVisible = "off";
 
-
+K_MS = K;
+save("K_MS", "K_MS");
 plot_sensitivity = false;
 plot_controller_sensitivity = false;
-plot_time_simulations = true;
+plot_time_simulations = false;
 
 if plot_sensitivity
     figure;
