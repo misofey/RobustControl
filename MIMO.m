@@ -82,7 +82,7 @@ opts.PhaseVisible = "off";
 K_MS = K;
 save("K_MS", "K_MS");
 plot_sensitivity = false;
-plot_controller_sensitivity = false;
+plot_controller_sensitivity = true;
 plot_time_simulations = false;
 
 if plot_sensitivity
@@ -129,7 +129,7 @@ if plot_controller_sensitivity
     grid
     bodeplot(KS(1, 1), opts)
     bodeplot(1/W_u(1, 1), opts)
-    legend("S", "1/W_{u11}");
+    legend("KS", "1/W_{u11}");
     title("")
     hold off
     
@@ -138,7 +138,7 @@ if plot_controller_sensitivity
     grid
     bodeplot(KS(2, 1), opts)
     bodeplot(1/W_u(2, 2), opts)
-    legend("S", "1/W_{u22}");
+    legend("KS", "1/W_{u22}");
     title("")
     hold off
     
@@ -147,7 +147,7 @@ if plot_controller_sensitivity
     grid
     bodeplot(KS(1, 2), opts)
     bodeplot(1/W_u(1, 1), opts)
-    legend("S", "1/W_{u11}");
+    legend("KS", "1/W_{u11}");
     title("")
     hold off
     
@@ -156,7 +156,7 @@ if plot_controller_sensitivity
     grid
     bodeplot(KS(2, 2), opts)
     bodeplot(1/W_u(2, 2), opts)
-    legend("S", "1/W_{u22}");
+    legend("KS", "1/W_{u22}");
     title("")
     hold off
 end

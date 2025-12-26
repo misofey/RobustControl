@@ -33,34 +33,25 @@ W_u = [W_u1 0;
        0    W_u2];
 
 
-W_p.u = ["omega_dist", "z_dist"];
-W_p.y = "z1";
-% W_p.u = ["e_omega", "e_z"];
-% W_p.y = ["z1"];
+% W_p.u = ["omega_dist", "z_dist"];
+% W_p.y = "z1";
+W_p.u = ["e_omega", "e_z"];
+W_p.y = ["z1"];
 W_u.u = ["beta", "tau"];
 W_u.y = "z2";
 
 %% interconnection
-
-tf_order = 8;
-
 % beta_controller = tunableTF('K_beta', 2, 2) + tunablePID("K_beta2", "PD");
 beta_omega_LL = tunableTF('beta_omega_LL', 2, 2);
 beta_omega_PID = tunablePID("beta_omega_PID", "PD");
 
-% beta_controller = tunablePID("K_beta", "PD");
-% beta_controller.u = 'e_omega';
-% beta_controller.y = 'beta';
 
 % tau_controller = tunableTF('K_tau', 4, 4);
 tau_omega_PID = tunablePID("tau_omega_PID", "PD");
 tau_omega_LL = tunableTF("tau_omega_LL", 2, 2);
-% tau_controller.u = 'e_omega';
-% tau_controller.y = 'tau';
 
 beta_z_pid = tunablePID("beta_z_pid", "PD");
-% beta_z.u = 'e_omega';
-% beta_z.y = 'beta';
+
 
 % tau_z_PID = tunablePID("gain_tauz", "P");
 % tau_z = tunableTF('K_beta', 4, 4);
@@ -73,21 +64,12 @@ K.OutputName = ["beta", "tau"];
 
 
 %%
-% blk = tunablePID('tunableTF', 'pid');
-% Kp = realp('Kp' ,1);
-
 dist_omega = sumblk('omega_dist = omega + d_omega');
 dist_z = sumblk('z_dist = z + d_z');
 
-err_omega = sumblk('e_omega = w_omega - omega_dist');
-err_z = sumblk('e_z = w_z - z_dist');
+err_omega = sumblk('e_omega = -omega_dist');
+err_z = sumblk('e_z =- z_dist');
 
-% mimo_complete = connect(G, Gd,...
-%     beta_controller, tau_controller, ...
-%     err_omega, err_z, dist_omega, dist_z, ...
-%     W_u, W_p,...
-%     {"w_omega", "w_z", "d_omega", "d_z"}, ...
-%     {"z1", "z2", "omega_dist", "z_dist", "beta", "tau"});
 mimo_cl = connect(G, K, ...
     err_omega, err_z, dist_omega, dist_z, ...
     W_u, W_p,...
@@ -95,7 +77,7 @@ mimo_cl = connect(G, K, ...
     {"z1", "z2"});
 
 %%
-opt = hinfstructOptions('Display', 'final', "RandomStart", 5);
+opt = hinfstructOptions('Display', 'final', "RandomStart", 10);
 N = hinfstruct(mimo_cl, opt);
 
 %% recover sensitivity
@@ -120,17 +102,25 @@ S = minreal(feedback(eye(2), L));
 %     err_omega, err_z, dist_omega, dist_z,...
 %     {"d_omega", "d_z"}, ...
 %     {"omega_dist", "z_dist"});
-S.InputName = ["d_omega", "d_z"];
-S.OutputName = ["omega_dist", "z_dist"];
-T = G*K*S;
-KS = K*S;
+S.InputName = ["d_{\omega}", "d_z"];
+S.OutputName = ["\omega{dist}", "z_{dist}"];
+T = G*K_tuned*S;
+KS = K_tuned*S;
 hinfnorm(W_p *S)
 opts = bodeoptions;
 opts.PhaseVisible = "off";
 
-plot_sensitivity = true;
+L_MS = minreal(G*K_MS);
+S_MS = minreal(feedback(eye(2), L_MS));
+S_MS.InputName = ["d_{\omega}", "d_z"];
+S_MS.OutputName = ["\omega{dist}", "z_{dist}"];
+KS_MS = K_MS * S_MS;
+T_MS = eye(2)-S_MS;
+
+plot_sensitivity = false;
 plot_controller_sensitivity = false;
-plot_time_simulations = false;
+plot_complementary_sensitivity = false;
+plot_time_simulations = true;
 
 if plot_sensitivity
     figure;
@@ -170,44 +160,86 @@ if plot_sensitivity
     hold off
 end
 
+if plot_complementary_sensitivity
+    figure;
+    hold on
+    grid
+    bodeplot(T(1, 1), opts)
+    bodeplot(T_MS(1, 1), opts)
+    legend("T_{FS}", "T_{MS}");
+    title("")
+    hold off
+    
+    figure;
+    hold on
+    grid
+    bodeplot(T(2, 1), opts)
+    bodeplot(T_MS(2, 1), opts)
+    legend("T_{FS}", "T_{MS}");
+    title("")
+    hold off
+    
+    figure;
+    hold on
+    grid
+    bodeplot(T(1, 2), opts)
+    bodeplot(T_MS(1, 2), opts)
+    legend("T_{FS}", "T_{MS}");
+    title("")
+    hold off
+    
+    figure;
+    hold on
+    grid
+    bodeplot(T(2, 2), opts)
+    bodeplot(T_MS(2, 2), opts)
+    legend("T_{FS}", "T_{MS}");
+    title("")
+    hold off
+end
+
 if plot_controller_sensitivity
     figure;
     hold on
     grid
     bodeplot(KS(1, 1), opts)
+    bodeplot(KS_MS(1, 1), opts)
     bodeplot(1/W_u(1, 1), opts)
     legend("S", "1/W_{u11}");
-    title("")
+    title("KS_{fixed}", "KS_{mixed}", "W_{u11}")
     hold off
     
     figure;
     hold on
     grid
     bodeplot(KS(2, 1), opts)
+    bodeplot(KS_MS(2, 1), opts)
     bodeplot(1/W_u(2, 2), opts)
     legend("S", "1/W_{u22}");
-    title("")
+    title("KS_{fixed}", "KS_{mixed}", "W_{u22}")
     hold off
     
     figure;
     hold on
     grid
     bodeplot(KS(1, 2), opts)
+    bodeplot(KS_MS(1, 2), opts)
     bodeplot(1/W_u(1, 1), opts)
     legend("S", "1/W_{u11}");
-    title("")
+    title("KS_{fixed}", "KS_{mixed}", "W_{u11}")
     hold off
     
     figure;
     hold on
     grid
     bodeplot(KS(2, 2), opts)
+    bodeplot(KS_MS(2, 2), opts)
     bodeplot(1/W_u(2, 2), opts)
     legend("S", "1/W_{u22}");
-    title("")
+    title("KS_{fixed}", "KS_{mixed}", "W_{u22}")
     hold off
 end
 
 if plot_time_simulations
-    stepWind(FWT, -K)
+    stepWind(FWT, - K_tuned)
 end
