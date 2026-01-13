@@ -90,23 +90,19 @@ M = N(1:4, 1:4);
 
 
 % NS, NP
-certain_gp = P(3:end, 3:end);
-
-nominal_system = lft(certain_gp, K_MS);
-
 % negative controller when not using ge
-L_cert = minreal(-G * K_MS);
+L_cert = minreal(G * K_MS);
 
 a = minreal(eye(2) + L_cert);
 unstable_open_loop_zeros = sum(real(pole(L_cert))>=0)
-% [sv, wout] = sigma(N(3:6, 3:4));
-omega = logspace(-4, 4, 300);
 
+
+omega = logspace(-4, 4, 300);
 % NP
 blk = [2 4];
-[bounds_NP, muinfo_NP] = mussv(frd(N(3:6, 3:4), omega), blk, 's');
+[bounds_NP, muinfo_NP] = mussv(frd(N(5:8, 5:6), omega), blk, 'as');
 [mag_NP, ~, ~] = bode(bounds_NP(1, 1));
-maximum_ssv_NP = max(mag);
+maximum_ssv_NP = max(mag_NP(:))
 if max(mag_NP)<1
     nominal_performance = true
 else
@@ -142,7 +138,7 @@ plot_mu_analysis = true;
 
 if plot_mu_analysis
     figure;
-    nyquist(minreal(1/(a(1,1)*a(2,2) - a(2,1)*a(1,2))));
+    nyquist(minreal((a(1,1)*a(2,2) - a(2,1)*a(1,2))));
     title('');
 
     figure;
@@ -157,3 +153,74 @@ if plot_mu_analysis
 end
 
 
+%% D-K iterations
+
+NDelta = lft(blkdiag(delta_i, delta_o), P);
+
+[K_DK, CLPerf] = musyn(NDelta, 2, 2);
+
+ %% NS, NP, RS, RP
+N_DK = minreal(lft(P, K_DK));
+M_DK = N_DK(1:4, 1:4);
+% NS, NP
+% negative controller when not using ge
+L_DK = minreal(G * K_DK);
+
+a = minreal(eye(2) + L_DK);
+unstable_open_loop_zeros = sum(real(pole(L_DK))>=0)
+
+
+omega = logspace(-4, 4, 300);
+% NP
+blk = [2 4];
+[bounds_NP, muinfo_NP] = mussv(frd(N_DK(5:8, 5:6), omega), blk, 'as');
+[mag_NP, ~, ~] = bode(bounds_NP(1, 1));
+maximum_ssv_NP = max(mag_NP(:))
+if max(mag_NP)<1
+    nominal_performance = true
+else
+    nominal_performance = false
+end
+
+
+
+% RS
+
+blk = [4, 0];
+[bounds_RS, muinfo_RS] = mussv(frd(M, omega), blk, 's');
+
+[mag_RS, ~, ~] = bode(bounds_RS(1, 1));
+if max(mag_RS)<1
+    robust_stability = true
+else
+    robust_stability = false
+end
+
+% RP
+blk = [[4 0]; [2 4]];
+[bounds_RP] = mussv(frd(N_DK, omega), blk, 's');
+
+[mag_RP, ~, ~] = bode(bounds_RP(1, 1));
+if max(mag_RP) < 1
+    robust_performance = true;
+else
+    robust_performance = false;
+end
+
+plot_mu_analysis = true;
+
+if plot_mu_analysis
+    figure;
+    nyquist(minreal((a(1,1)*a(2,2) - a(2,1)*a(1,2))));
+    title('');
+
+    figure;
+    semilogx(omega, mag2db(mag_NP(:)))
+    hold on
+    semilogx(omega, mag2db(mag_RS(:)))
+    semilogx(omega, mag2db(mag_RP(:)))
+    title('');
+    legend("NP", "RS", "RP");
+    grid()
+    hold off
+end
