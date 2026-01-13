@@ -67,7 +67,7 @@ delta_o = [ultidyn("delta_o1", 1) 0; 0 ultidyn("delta_o2", 1)];
 
 G_p = (eye(2)+W_o*delta_o) * G * (eye(2)+W_i*delta_i);
 
-plot_singular_values = true;
+plot_singular_values = false;
 if plot_singular_values
     figure;
     sigma(G_p);
@@ -79,9 +79,81 @@ end
 P = [zeros(2, 6) W_i;
     W_o * G zeros(2, 4) W_o*G;
     zeros(2, 6) W_u;
-    W_p*G W_p zeros(2) W_p*G;
-    -G -eye(2) eye(2) -G];
+    W_p*G W_p W_p W_p*G;
+    -G -eye(2) -eye(2) -G];
 
-N = lft(P, K_MS);
+N = minreal(lft(P, K_MS));
 
-M = N(1:2, 1:2);
+M = N(1:4, 1:4);
+
+%% NS, NP, RS, RP
+
+
+% NS, NP
+certain_gp = P(3:end, 3:end);
+
+nominal_system = lft(certain_gp, K_MS);
+
+% negative controller when not using ge
+L_cert = minreal(-G * K_MS);
+
+a = minreal(eye(2) + L_cert);
+unstable_open_loop_zeros = sum(real(pole(L_cert))>=0)
+% [sv, wout] = sigma(N(3:6, 3:4));
+omega = logspace(-4, 4, 300);
+
+% NP
+blk = [2 4];
+[bounds_NP, muinfo_NP] = mussv(frd(N(3:6, 3:4), omega), blk, 's');
+[mag_NP, ~, ~] = bode(bounds_NP(1, 1));
+maximum_ssv_NP = max(mag);
+if max(mag_NP)<1
+    nominal_performance = true
+else
+    nominal_performance = false
+end
+
+
+
+% RS
+
+blk = [4, 0];
+[bounds_RS, muinfo_RS] = mussv(frd(M, omega), blk, 's');
+
+[mag_RS, ~, ~] = bode(bounds_RS(1, 1));
+if max(mag_RS)<1
+    robust_stability = true
+else
+    robust_stability = false
+end
+
+% RP
+blk = [[4 0]; [2 4]];
+[bounds_RP] = mussv(frd(N, omega), blk, 's');
+
+[mag_RP, ~, ~] = bode(bounds_RP(1, 1));
+if max(mag_RP) < 1
+    robust_performance = true;
+else
+    robust_performance = false;
+end
+
+plot_mu_analysis = true;
+
+if plot_mu_analysis
+    figure;
+    nyquist(minreal(1/(a(1,1)*a(2,2) - a(2,1)*a(1,2))));
+    title('');
+
+    figure;
+    semilogx(omega, mag2db(mag_NP(:)))
+    hold on
+    semilogx(omega, mag2db(mag_RS(:)))
+    semilogx(omega, mag2db(mag_RP(:)))
+    title('');
+    legend("NP", "RS", "RP");
+    grid()
+    hold off
+end
+
+

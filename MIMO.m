@@ -82,8 +82,8 @@ opts.PhaseVisible = "off";
 K_MS = K;
 save("K_MS", "K_MS");
 plot_sensitivity = false;
-plot_controller_sensitivity = true;
-plot_time_simulations = false;
+plot_controller_sensitivity = false;
+plot_time_simulations = true;
 
 if plot_sensitivity
     figure;

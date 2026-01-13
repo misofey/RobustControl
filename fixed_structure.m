@@ -120,7 +120,7 @@ T_MS = eye(2)-S_MS;
 plot_sensitivity = false;
 plot_controller_sensitivity = false;
 plot_complementary_sensitivity = false;
-plot_time_simulations = true;
+plot_time_simulations = false;
 
 if plot_sensitivity
     figure;
@@ -241,5 +241,5 @@ if plot_controller_sensitivity
 end
 
 if plot_time_simulations
-    stepWind(FWT, - K_tuned)
+    stepWind(FWT, - K_tuned);
 end
