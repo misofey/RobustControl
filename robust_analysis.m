@@ -134,6 +134,23 @@ else
     robust_performance = false;
 end
 
+% NP
+blk_NP = [2 4];
+mu_NP_max = peak_mu(N(5:8, 5:6), blk_NP, omega, 'as');
+
+% RS
+blk_RS = [4 0];
+mu_RS_max = peak_mu(M, blk_RS, omega, 's');
+
+% RP
+blk_RP = [[4 0]; [2 4]];
+mu_RP_max = peak_mu(N, blk_RP, omega, 's');
+
+fprintf('\n--- μ PEAK VALUES (Before D-K) ---\n');
+fprintf('Nominal Performance μ_max = %.4f\n', mu_NP_max);
+fprintf('Robust Stability   μ_max = %.4f\n', mu_RS_max);
+fprintf('Robust Performance μ_max = %.4f\n', mu_RP_max);
+
 plot_mu_analysis = true;
 
 if plot_mu_analysis
@@ -207,6 +224,21 @@ else
     robust_performance = false;
 end
 
+% NP
+mu_NP_DK_max = peak_mu(N_DK(5:8, 5:6), blk_NP, omega, 'as');
+
+% RS
+mu_RS_DK_max = peak_mu(M_DK, blk_RS, omega, 's');
+
+% RP
+mu_RP_DK_max = peak_mu(N_DK, blk_RP, omega, 's');
+
+fprintf('\n--- μ PEAK VALUES (After D-K) ---\n');
+fprintf('Nominal Performance μ_max = %.4f\n', mu_NP_DK_max);
+fprintf('Robust Stability   μ_max = %.4f\n', mu_RS_DK_max);
+fprintf('Robust Performance μ_max = %.4f\n', mu_RP_DK_max);
+
+
 plot_mu_analysis = true;
 
 if plot_mu_analysis
@@ -223,4 +255,11 @@ if plot_mu_analysis
     legend("NP", "RS", "RP");
     grid()
     hold off
+end
+
+function mu_max = peak_mu(sys, blk, omega, mu_type)
+    % Compute peak structured singular value over frequency
+    bounds = mussv(frd(sys, omega), blk, mu_type);
+    mag = squeeze(abs(freqresp(bounds(1,1), omega)));
+    mu_max = max(mag);
 end
