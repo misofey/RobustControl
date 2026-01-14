@@ -52,6 +52,9 @@ W_u = [W_u1 0;
 
 % % HINF DESIGN %%
 P = minreal(augw(G, W_p, W_u, []));
+P = [zeros(2) W_u;
+    W_p W_p*G;
+    -eye(2) -G];
 [K,CL,gamma,INFO] = hinfsyn(P, 2, 2);
 % [K,CL,gamma,INFO] = mixsyn(G, W_p, W_u, []);
 
@@ -75,6 +78,7 @@ else
     max_K_pole = max(real(K_poles))
     max_G_pole = max(real(G_poles))
 end
+
 %%
 opts = bodeoptions;
 opts.PhaseVisible = "off";
