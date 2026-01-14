@@ -41,10 +41,10 @@ W_u.y = "z2";
 
 %% Uncertainity weights
 
-W_i1 = (1/16/pi*s + 0.) / (1/64/pi*s + 1);
+W_i1 = (1/16/pi*s + 0.2) / (1/64/pi*s + 1);
 W_i2 = W_i1;
 
-W_o1 = (0.05*s + 0.25) / (0.01*s + 1);
+W_o1 = (0.05*s + 0.25) / (0.1*s + 1);
 W_o2 = W_o1;
 
 W_i = [W_i1 0; 0 W_i2];
@@ -67,11 +67,19 @@ delta_o = [ultidyn("delta_o1", 1) 0; 0 ultidyn("delta_o2", 1)];
 
 G_p = (eye(2)+W_o*delta_o) * G * (eye(2)+W_i*delta_i);
 
-plot_singular_values = false;
+plot_singular_values = true;
+[sv, wout] = sigma(G_p);
+
 if plot_singular_values
     figure;
     sigma(G_p);
     title('');
+
+    figure;
+    loglog(wout, sv(1, :)./sv(2, :));
+    title('')
+    xlabel("Frequency(rad/s)");
+    ylabel('Condition number')
 end
 
 %% generalized plant
