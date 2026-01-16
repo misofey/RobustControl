@@ -271,3 +271,111 @@ function mu_max = peak_mu(sys, blk, omega, mu_type)
     mag = squeeze(abs(freqresp(bounds(1,1), omega)));
     mu_max = max(mag);
 end
+
+%% TIME-DOMAIN SIMULATIONS
+
+figure('Name', 'Nominal Response Comparison', 'Position', [100 100 1200 800]);
+
+% Mixed-Sensitivity Controller
+subplot(2,2,1);
+%f1 = figure;
+stepWind(FWT, -K_MS);
+title('Mixed-Sensitivity: Step Wind Response');
+%exportgraphics(f1, "/home/mahargardr/master_courses/robust_control/part_2/images/ms_stepwind_response.png", 'Resolution',300);
+
+% D-K Controller
+%f2 = figure;
+subplot(2,2,2);
+stepWind(FWT, -K_DK);
+title('D-K Iteration: Step Wind Response');
+%exportgraphics(f2, "/home/mahargardr/master_courses/robust_control/part_2/images/dk_stepwind_response.png", 'Resolution',300);
+
+%omega_r
+subplot(2,2,3);
+G_sim = G; G_sim.u = 'u'; G_sim.y = 'y_p';
+Gd_sim = Gd; Gd_sim.u = 'V'; Gd_sim.y = 'y_d';
+Sum_sim = sumblk('y = y_p + y_d', 2);
+
+K_MS_sim = -K_MS; K_MS_sim.u = 'y'; K_MS_sim.y = 'u';
+CL_MS = connect(G_sim, K_MS_sim, Gd_sim, Sum_sim, 'V', 'y');
+
+K_DK_sim = -K_DK; K_DK_sim.u = 'y'; K_DK_sim.y = 'u';
+CL_DK = connect(G_sim, K_DK_sim, Gd_sim, Sum_sim, 'V', 'y');
+
+t = 0:0.01:100;
+[y_MS, ~] = step(CL_MS, t);
+[y_DK, ~] = step(CL_DK, t);
+
+plot(t, y_MS(:,1), 'b-', 'LineWidth', 1.5); hold on;
+plot(t, y_DK(:,1), 'r--', 'LineWidth', 1.5);
+xlabel('Time (s)'); ylabel('\omega_r');
+title('Generator Speed Comparison');
+legend('MS', 'D-K'); grid on;
+
+subplot(2,2,4);
+plot(t, y_MS(:,2), 'b-', 'LineWidth', 1.5); hold on;
+plot(t, y_DK(:,2), 'r--', 'LineWidth', 1.5);
+xlabel('Time (s)'); ylabel('z (m)');
+title('Platform Displacement Comparison');
+legend('MS', 'D-K'); grid on;
+
+sgtitle('Nominal Step Wind Disturbance Response');
+
+%% ROBUST SIMULATIONS
+
+num_samples = 20;
+
+figure('Name', 'Uncertain Response', 'Position', [100 100 1400 600]);
+
+% MS Robustness
+subplot(1,2,1); hold on;
+for i = 1:num_samples
+    G_s = usample(G_p);
+    G_s.u = 'u'; G_s.y = 'y_p';
+    try
+        CL_s = connect(G_s, K_MS_sim, Gd_sim, Sum_sim, 'V', 'y');
+        [y_s, ~] = step(CL_s, t);
+        plot(t, y_s(:,1), 'b-', 'Color', [0 0 1 0.2]);
+    catch; end
+end
+plot(t, y_MS(:,1), 'b-', 'LineWidth', 2);
+xlabel('Time (s)'); ylabel('\omega_r (rad/s)');
+title('MS Controller Under Uncertainty'); grid on;
+
+% D-K Robustness
+subplot(1,2,2); hold on;
+for i = 1:num_samples
+    G_s = usample(G_p);
+    G_s.u = 'u'; G_s.y = 'y_p';
+    try
+        CL_s = connect(G_s, K_DK_sim, Gd_sim, Sum_sim, 'V', 'y');
+        [y_s, ~] = step(CL_s, t);
+        plot(t, y_s(:,1), 'r-', 'Color', [1 0 0 0.2]);
+    catch; end
+end
+plot(t, y_DK(:,1), 'r-', 'LineWidth', 2);
+xlabel('Time (s)'); ylabel('\omega_r (rad/s)');
+title('D-K Controller Under Uncertainty'); grid on;
+
+sgtitle('Step Response Under Uncertainty (20 samples)');
+
+%% 3. FREQUENCY-DOMAIN COMPARISON
+
+L_MS = minreal(G * K_MS);
+L_DK = minreal(G * K_DK);
+S_MS = minreal(feedback(eye(2), L_MS));
+S_DK = minreal(feedback(eye(2), L_DK));
+T_MS = eye(2) - S_MS;
+T_DK = eye(2) - S_DK;
+
+opts = bodeoptions; opts.PhaseVisible = 'off'; opts.Grid = 'on';
+
+figure('Name', 'Sensitivity Comparison');
+bodemag(S_MS(1,1), 'b-', S_DK(1,1), 'r--', 1/W_p1, 'k:', opts);
+legend('S_{MS}', 'S_{DK}', '1/W_p', 'Location', 'best');
+title('Sensitivity S(1,1): d_\omega \rightarrow \omega');
+
+figure('Name', 'Complementary Sensitivity Comparison');
+bodemag(T_MS(1,1), 'b-', T_DK(1,1), 'r--', opts);
+legend('T_{MS}', 'T_{DK}', 'Location', 'best');
+title('Complementary Sensitivity T(1,1)');
